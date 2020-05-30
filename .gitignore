@@ -1,0 +1,5 @@
+staging_config.py
+prod_config.py
+*.db
+*.log
+__pycache__/*
