@@ -1,12 +1,13 @@
 import unittest
 from round import Round, Move
 
+
 class WordCollection:
     def __init__(self):
         self.put_back_cnt = 0
 
     def get_word(self):
-        return("one")
+        return ("one")
 
     def add_word(self, word, player):
         self.put_back_cnt += 1
@@ -30,7 +31,7 @@ class TestMove(unittest.TestCase):
 class TestRound(unittest.TestCase):
     def test_standard_moves(self):
         r = Round(WordCollection(), [0, 1, 2])
-        self.assertEqual(r.start_game(),(0, 1))
+        self.assertEqual(r.start_game(), (0, 1))
         self.assertEqual(r.start_move(0), "one")
         self.assertEqual(r.guessed(0), "one")
         self.assertEqual(r.time_ran_out(0), (1, 2))
@@ -41,7 +42,7 @@ class TestRound(unittest.TestCase):
         self.assertEqual(r.guessed(2), "one")
         self.assertEqual(r.guessed(2), "one")
         self.assertEqual(r.guessed(2), "one")
-        self.assertEqual(r.pretty_scores(), [(0, 5), (2, 4), (1,  1)])
+        self.assertEqual(r.pretty_scores(), [(0, 5), (2, 4), (1, 1)])
 
 
 if __name__ == '__main__':

@@ -3,3 +3,4 @@ prod_config.py
 *.db
 *.log
 __pycache__/*
+.idea
