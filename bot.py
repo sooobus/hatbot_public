@@ -130,12 +130,29 @@ def echo(update, context):
         update.message.reply_text(reply)
         return
     if room:
-        # Add word
-        status = hat.add_word(text, user_id, room)
-        if status:
-            reply = texts.word_added_message.format(hat.words_in_hat(room))
+        # Add word(s)
+        words = text.split()
+        if len(words) == 1:
+            status = hat.add_word(text, user_id, room)
+            if status:
+                reply = texts.word_added_message.format(hat.words_in_hat(room))
+            else:
+                reply = texts.word_not_added_message
         else:
-            reply = texts.word_not_added_message
+            added_word_count = 0
+            skipped_words = []
+            for word in words:
+                if hat.add_word(word, user_id, room):
+                    added_word_count += 1
+                else:
+                    skipped_words.append(word)
+            skipped_words_string = ", ".join(skipped_words)
+            if len(skipped_words) > 0 and len(skipped_words_string) < 200:
+                reply = texts.words_added_skipped_words_message.format(added_word_count, skipped_words_string,
+                                                                       hat.words_in_hat(room))
+            else:
+                reply = texts.words_added_skip_count_message.format(added_word_count, len(skipped_words),
+                                                                    hat.words_in_hat(room))
     else:
         # Add user to the room
         print(text)
