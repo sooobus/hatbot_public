@@ -4,3 +4,4 @@ prod_config.py
 *.log
 __pycache__/*
 .idea
+personal_rooms.txt

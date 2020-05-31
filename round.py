@@ -35,7 +35,8 @@ class Round:
         self.move = Move(self.players)
 
     def start_game(self):
-        return self.__next_move()
+        if len(self.players) > 1:
+            return self.__next_move()
 
     def start_move(self, player):
         if player == self.lead:

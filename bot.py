@@ -22,6 +22,7 @@ hat, game = start_game(sys.argv[1])
 
 allowed_rooms = list(map(str.strip, open("rooms.txt").readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt").readlines()))
+personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
 
 
 def start(update, context):
@@ -55,7 +56,7 @@ def start_turn(update, context):
     update.message.reply_text(reply, reply_markup=reply_markup_game)
 
 
-def send_results_to_all(room):
+def send_results_to_all(context, room):
     scores = context.bot_data["round" + room].pretty_scores()
     scores_names = ["{}: {}".format(context.bot_data["username" + str(k)], v) for k, v in scores]
     reply = "\n".join(scores_names)
@@ -80,9 +81,11 @@ def finish_round(update, context):
     user = update.message.from_user
     user_id = user['id']
     room = game.room_for_player(user_id)
-    send_results_to_all(room)
-    for user in context.bot_data["room" + room]:
-        leaveroom_player(user, context)
+    send_results_to_all(context, room)
+    users_to_kick = list(context.bot_data["room" + room])
+    print(users_to_kick)
+    for user in users_to_kick:
+        leaveroom_player(user, context.bot_data["chatid" + str(user)], context)
 
 
 def continue_turn(update, context):
@@ -137,7 +140,7 @@ def echo(update, context):
         # Add user to the room
         print(text)
         text = text.lower()
-        if text in allowed_rooms:
+        if text in allowed_rooms or text in personal_rooms:
             game.add_player(user_id, text)
             reply = texts.room_greeting_message.format(text, hat.words_in_hat(text))
         elif text in experimental_rooms:
@@ -182,12 +185,16 @@ def check_ready(room, context):
         return False
 
 
-def start_round(room):
+def start_round(room, context):
     reply = texts.everyone_ready
     hatwr = HatWrapper(room, hat)
-    context.bot_data["round" + room] = Round(hatwr, list(context.bot_data["room" + room]))
-    turn = context.bot_data["round" + room].start_game()
-    reply += pretty_turn(turn, context)
+    if len(context.bot_data["room" + room]) < 2:
+        reply = "Для начала игры нужно хотя бы два игрока"
+        turn = (0, 0)
+    else:
+        context.bot_data["round" + room] = Round(hatwr, list(context.bot_data["room" + room]))
+        turn = context.bot_data["round" + room].start_game()
+        reply += pretty_turn(turn, context)
     for user in context.bot_data["room" + room]:
         reply_markup = None
         if user == turn[0]:
@@ -200,7 +207,7 @@ def force_start(update, context):
     user = update.message.from_user
     user_id = user['id']
     room = game.room_for_player(user_id)
-    start_round(room)
+    start_round(room, context)
 
 
 def ready(update, context):
@@ -218,7 +225,7 @@ def ready(update, context):
             context.bot_data["room" + room] = set([user_id])
         reply = texts.ready
         if check_ready(room, context):
-            start_round(room)
+            start_round(room, context)
             return
     else:
         reply = ":("
