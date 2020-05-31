@@ -22,6 +22,7 @@ hat, game = start_game(sys.argv[1])
 
 allowed_rooms = list(map(str.strip, open("rooms.txt").readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt").readlines()))
+personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
 
 def start(update, context):
     """Send a message when the command /start is issued."""
@@ -131,7 +132,7 @@ def echo(update, context):
         # Add user to the room
         print(text)
         text = text.lower()
-        if text in allowed_rooms:
+        if text in allowed_rooms or text in personal_rooms:
             game.add_player(user_id, text)
             reply = texts.room_greeting_message.format(text, hat.words_in_hat(text))
         elif text in experimental_rooms:
