@@ -35,6 +35,7 @@ def create_connection(db_file):
         print(e)
     return conn
 
+
 def execute_sql(db_file, sql):
     conn = create_connection(db_file)
     try:
@@ -47,6 +48,7 @@ def execute_sql(db_file, sql):
         print(e)
         return False
 
+
 def execute_sql_select(db_file, sql):
     conn = create_connection(db_file)
     try:
@@ -58,16 +60,17 @@ def execute_sql_select(db_file, sql):
     except Error as e:
         print(e)
 
+
 def check_word(word):
     def check_rus(word):
         for c in word:
-            if not (('а' <= c <= 'я') or c=='-' or c=='ё'):
+            if not (('а' <= c <= 'я') or c == '-' or c == 'ё'):
                 return False
         return True
 
     def check_en(word):
         for c in word:
-            if not (('a' <= c <= 'z') or c=='-'):
+            if not (('a' <= c <= 'z') or c == '-'):
                 return False
         return True
 
@@ -75,6 +78,7 @@ def check_word(word):
         return False
 
     return check_rus(word) or check_en(word)
+
 
 class Hat:
     def __init__(self, db_file):
@@ -116,6 +120,7 @@ class Hat:
         if not words_num:
             return ""
         return words_num[0][0]
+
 
 class HatWrapper:
     def __init__(self, room, hat):

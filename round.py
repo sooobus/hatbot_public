@@ -2,8 +2,10 @@ import itertools
 from collections import Counter
 from random import shuffle
 
+
 class Move:
     """ Implements standard Hat algorithm. """
+
     def __init__(self, players):
         self.players = players
         self.lead = 0

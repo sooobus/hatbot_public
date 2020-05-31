@@ -24,6 +24,7 @@ allowed_rooms = list(map(str.strip, open("rooms.txt").readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt").readlines()))
 personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
 
+
 def start(update, context):
     """Send a message when the command /start is issued."""
     update.message.reply_text(texts.start_message)
@@ -33,14 +34,17 @@ def help(update, context):
     """Send a message when the command /help is issued."""
     update.message.reply_text(texts.help_message)
 
+
 buttons = ["угадано!", "ошибка :(", "всё."]
 ready_button = ["хочу слово!"]
 
 reply_markup_game = ReplyKeyboardMarkup.from_column(buttons)
 reply_markup_ready = ReplyKeyboardMarkup.from_column(ready_button)
 
+
 def pretty_turn(turn, context):
     return "{} -> {}".format(context.bot_data["username" + str(turn[0])], context.bot_data["username" + str(turn[1])])
+
 
 def start_turn(update, context):
     user = update.message.from_user
@@ -51,14 +55,16 @@ def start_turn(update, context):
     reply = context.bot_data["round" + room].start_move(user_id)
     update.message.reply_text(reply, reply_markup=reply_markup_game)
 
+
 def send_results_to_all(context, room):
     scores = context.bot_data["round" + room].pretty_scores()
     scores_names = ["{}: {}".format(context.bot_data["username" + str(k)], v) for k, v in scores]
     reply = "\n".join(scores_names)
     for user in context.bot_data["room" + room]:
         context.bot.send_message(context.bot_data["chatid" + str(user)],
-                                reply,
-                                reply_markup=ReplyKeyboardRemove())
+                                 reply,
+                                 reply_markup=ReplyKeyboardRemove())
+
 
 def results(update, context):
     user = update.message.from_user
@@ -177,6 +183,7 @@ def check_ready(room, context):
         return True
     else:
         return False
+
 
 def start_round(room, context):
     reply = texts.everyone_ready
