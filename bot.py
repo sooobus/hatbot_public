@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 hat, game = start_game(sys.argv[1])
 
-allowed_rooms = list(map(str.strip, open("rooms.txt").readlines()))
-experimental_rooms = list(map(str.strip, open("experimental_rooms.txt").readlines()))
-personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
+allowed_rooms = list(map(str.strip, open("rooms.txt", encoding='utf8').readlines()))
+experimental_rooms = list(map(str.strip, open("experimental_rooms.txt", encoding='utf8').readlines()))
+personal_rooms = list(map(str.strip, open("personal_rooms.txt", encoding='utf8').readlines()))
 
 
 def start(update, context):
