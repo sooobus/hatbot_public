@@ -32,6 +32,8 @@ class Round:
         self.word_collection = word_collection
         self.players = players
         self.points = Counter()
+        self.explained_points = Counter()
+        self.guessed_points = Counter()
         self.move = Move(self.players)
 
     def start_game(self):
@@ -48,7 +50,9 @@ class Round:
         """ Increments player's points. """
         if player == self.lead:
             self.points[player] += 1
+            self.explained_points[player] += 1
             self.points[self.target] += 1
+            self.guessed_points[self.target] += 1
             return self.__next_word(player)
         else:
             return "Сейчас не ваш ход"
@@ -70,7 +74,11 @@ class Round:
             return "Сейчас не ваш ход"
 
     def pretty_scores(self):
-        return self.points.most_common(len(self.players))
+        most_common = self.points.most_common(len(self.players))
+        player_scores = []
+        for player, total_score in most_common:
+            player_scores.append([player, total_score, self.explained_points[player], self.guessed_points[player]])
+        return player_scores
 
     def __next_move(self):
         """ Starts next move and returns players' names. """
