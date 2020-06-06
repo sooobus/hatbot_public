@@ -33,6 +33,7 @@ class Round:
         self.players = players
         self.points = Counter()
         self.move = Move(self.players)
+        self._timer = None
 
     def start_game(self):
         if len(self.players) > 1:
@@ -71,6 +72,14 @@ class Round:
 
     def pretty_scores(self):
         return self.points.most_common(len(self.players))
+
+    @property
+    def timer(self):
+        return self._timer
+
+    @timer.setter
+    def timer(self, timer):
+        self._timer = timer
 
     def __next_move(self):
         """ Starts next move and returns players' names. """
