@@ -72,7 +72,10 @@ def results(update, context):
     room = game.room_for_player(user_id)
     logger.info("results %d", user_id)
     scores = context.bot_data["round" + room].pretty_scores()
-    scores_names = ["{}: {}".format(context.bot_data["username" + str(k)], v) for k, v in scores]
+    scores_names = []
+    for player, total_score, explained_score, guessed_score in scores:
+        player_username = context.bot_data["username" + str(player)]
+        scores_names.append("{}: {}+{}={}".format(player_username, explained_score, guessed_score, total_score))
     reply = "\n".join(scores_names)
     update.message.reply_text(reply)
 

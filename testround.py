@@ -42,7 +42,7 @@ class TestRound(unittest.TestCase):
         self.assertEqual(r.guessed(2), "one")
         self.assertEqual(r.guessed(2), "one")
         self.assertEqual(r.guessed(2), "one")
-        self.assertEqual(r.pretty_scores(), [(0, 5), (2, 4), (1, 1)])
+        self.assertEqual(r.pretty_scores(), [[0, 5, 1, 4], [2, 4, 4, 0], [1, 1, 0, 1]])
 
 
 if __name__ == '__main__':
