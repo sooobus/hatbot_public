@@ -31,6 +31,13 @@ class TestMove(unittest.TestCase):
 class TestRound(unittest.TestCase):
     def test_standard_moves(self):
         r = Round(WordCollection(), [0, 1, 2])
+        self.assertFalse(r.timer)
+        r.timer = 25
+        self.assertEqual(r.timer, 25)
+        r.timer = 30
+        self.assertEqual(r.timer, 30)
+        r.timer = None
+        self.assertFalse(r.timer)
         self.assertEqual(r.start_game(), (0, 1))
         self.assertEqual(r.start_move(0), "one")
         self.assertEqual(r.guessed(0), "one")

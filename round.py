@@ -35,6 +35,7 @@ class Round:
         self.explained_points = Counter()
         self.guessed_points = Counter()
         self.move = Move(self.players)
+        self._timer = None
 
     def start_game(self):
         if len(self.players) > 1:
@@ -79,6 +80,14 @@ class Round:
         for player, total_score in most_common:
             player_scores.append([player, total_score, self.explained_points[player], self.guessed_points[player]])
         return player_scores
+
+    @property
+    def timer(self):
+        return self._timer
+
+    @timer.setter
+    def timer(self, timer):
+        self._timer = timer
 
     def __next_move(self):
         """ Starts next move and returns players' names. """
