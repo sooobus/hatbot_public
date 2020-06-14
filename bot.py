@@ -8,6 +8,8 @@ import sys
 import texts
 import prod_config
 import staging_config
+import time
+import threading
 
 from db import start_game, HatWrapper
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -22,11 +24,10 @@ logger = logging.getLogger(__name__)
 
 hat, game = start_game(sys.argv[1])
 
-allowed_rooms = list(map(str.strip, open("rooms.txt").readlines()))
-experimental_rooms = list(map(str.strip, open("experimental_rooms.txt").readlines()))
-personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
+allowed_rooms = list(map(str.strip, open("rooms.txt", encoding='utf8').readlines()))
+experimental_rooms = list(map(str.strip, open("experimental_rooms.txt", encoding='utf8').readlines()))
+personal_rooms = list(map(str.strip, open("personal_rooms.txt", encoding='utf8').readlines()))
 dictionaries = {}
-
 
 def read_dictionaries():
     result = {}
@@ -35,6 +36,7 @@ def read_dictionaries():
         result[dictionary_name] = list(
             map(str.strip, open("dictionaries/" + dictionary_name + ".txt", encoding='utf8').readlines()))
     return result
+
 
 
 def start(update, context):
@@ -58,12 +60,34 @@ def pretty_turn(turn, context):
     return "{} -> {}".format(context.bot_data["username" + str(turn[0])], context.bot_data["username" + str(turn[1])])
 
 
+def handle_timer(context, room, timer, message):
+    iteration = 0
+    while iteration < timer and not "abort_timer_message" + room in context.bot_data:
+        time.sleep(1)
+        iteration += 1
+        message.edit_text(str(iteration))
+    if "abort_timer_message" + room in context.bot_data:
+        message.edit_text(texts.timer_aborted_message.format(context.bot_data["abort_timer_message" + room]))
+    else:
+        message.edit_text(texts.timer_stopped_message)
+        for user in context.bot_data["room" + room]:
+            context.bot.send_message(context.bot_data["chatid" + str(user)], texts.timer_finished_message)
+
+
 def start_turn(update, context):
     user = update.message.from_user
     text = update.message.text.lower()
     user_id = user['id']
     room = game.room_for_player(user_id)
+    if context.bot_data["round" + room].timer:
+        context.bot_data.pop("abort_timer_message" + room, None)
+        timer_message = update.message.reply_text(str(0))
+        thread = threading.Thread(target=handle_timer, args=(context, room,
+                                                             context.bot_data["round" + room].timer, timer_message))
+        thread.start()
     logger.info("start_turn %d %s", user_id, text)
+    for user in context.bot_data["room" + room]:
+        context.bot.send_message(context.bot_data["chatid" + str(user)], texts.turn_started_message)
     reply = context.bot_data["round" + room].start_move(user_id)
     update.message.reply_text(reply, reply_markup=reply_markup_game)
 
@@ -84,7 +108,10 @@ def results(update, context):
     room = game.room_for_player(user_id)
     logger.info("results %d", user_id)
     scores = context.bot_data["round" + room].pretty_scores()
-    scores_names = ["{}: {}".format(context.bot_data["username" + str(k)], v) for k, v in scores]
+    scores_names = []
+    for player, total_score, explained_score, guessed_score in scores:
+        player_username = context.bot_data["username" + str(player)]
+        scores_names.append("{}: {}+{}={}".format(player_username, explained_score, guessed_score, total_score))
     reply = "\n".join(scores_names)
     update.message.reply_text(reply)
 
@@ -111,9 +138,11 @@ def continue_turn(update, context):
         update.message.reply_text(reply, reply_markup=reply_markup_game)
         return
     elif text == "ошибка :(":
+        context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].failed(user_id)
         reply = pretty_turn(turn, context)
     elif text == "всё.":
+        context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].time_ran_out(user_id)
         reply = pretty_turn(turn, context)
 
@@ -132,6 +161,21 @@ def echo(update, context):
     room = game.room_for_player(user_id)
     logger.info("ECHO %d %s", user_id, text)
     reply_markup = None
+    if "settimer" in context.user_data and context.user_data["settimer"]:
+        timer = int(text) if text.isdigit() and 0 < len(text) < 4 else -1
+        if 0 <= timer <= 300:
+            reply = texts.timer_set_message.format(timer)
+            if timer == 0:
+                timer = None
+                reply = texts.timer_unset_message
+            if "round" + room in context.bot_data:
+                context.bot_data["round" + room].timer = timer
+            context.bot_data["timer" + room] = timer
+        else:
+            reply = texts.invalid_timer_format_message
+        context.user_data["settimer"] = False
+        update.message.reply_text(reply)
+        return
     if "removeword" in context.user_data and context.user_data["removeword"]:
         status = hat.remove_word(text, room)
         if status:
@@ -218,6 +262,17 @@ def removeword(update, context):
         update.message.reply_text(texts.no_remove_from_hall_message)
 
 
+def settimer(update, context):
+    user = update.message.from_user
+    user_id = user['id']
+    room = game.room_for_player(user_id)
+    if room:
+        context.user_data["settimer"] = True
+        update.message.reply_text(texts.please_settimer_message)
+    else:
+        update.message.reply_text(texts.no_settimer_from_hall_message)
+
+
 def getword(update, context):
     user = update.message.from_user
     user_id = user['id']
@@ -249,6 +304,8 @@ def start_round(room, context):
         turn = (0, 0)
     else:
         context.bot_data["round" + room] = Round(hatwr, list(context.bot_data["room" + room]))
+        if "timer" + room in context.bot_data:
+            context.bot_data["round" + room].timer = context.bot_data["timer" + room]
         turn = context.bot_data["round" + room].start_game()
         reply += pretty_turn(turn, context)
     for user in context.bot_data["room" + room]:
@@ -335,6 +392,7 @@ def main():
     dp.add_handler(CommandHandler("getword", getword))
     dp.add_handler(CommandHandler("leaveroom", leaveroom))
     dp.add_handler(CommandHandler("removeword", removeword))
+    dp.add_handler(CommandHandler("settimer", settimer))
     dp.add_handler(CommandHandler("ready", ready))
     dp.add_handler(CommandHandler("results", results))
     dp.add_handler(CommandHandler("force_start", force_start))
