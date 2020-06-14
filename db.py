@@ -158,34 +158,3 @@ def start_game(db_file):
     hat = Hat(db_file)
     game = Game(db_file)
     return hat, game
-
-
-def tests():
-    hat, game = start_game("test165.db")
-    assert game.room_for_player(1) is None
-    game.add_player(1, "room1")
-    game.add_player(3, "room2")
-    game.add_player(2, "room1")
-    game.add_player(4, "room2")
-    assert game.room_size("room1") == 2
-    assert game.room_size("room2") == 2
-    assert game.room_for_player(2) == "room1"
-    assert hat.get_word("room1") is None
-    assert hat.add_word("первое", 1, "room1")
-    assert hat.add_word("второе", 1, "room1")
-    assert hat.words_in_hat("room1") == 2
-    assert hat.add_word("треТье", 1, "room1")
-    assert not hat.remove_word("кусь", "room1")
-    assert hat.add_word("чеТвертое", 1, "room1")
-    assert hat.add_word("пятое", 1, "room1")
-    assert hat.remove_word("пятое", "room1")
-    assert not hat.add_word("qcь", 1, "room1")
-    assert hat.get_word("room1")
-    assert hat.get_word("room1")
-    assert hat.get_word("room1")
-    assert hat.get_word("room1")
-    assert hat.get_word("room1") is None
-
-
-if __name__ == '__main__':
-    tests()
