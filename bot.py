@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import random
+from datetime import datetime
 import logging
 import sys
 import texts
@@ -25,6 +27,16 @@ hat, game = start_game(sys.argv[1])
 allowed_rooms = list(map(str.strip, open("rooms.txt", encoding='utf8').readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt", encoding='utf8').readlines()))
 personal_rooms = list(map(str.strip, open("personal_rooms.txt", encoding='utf8').readlines()))
+dictionaries = {}
+
+def read_dictionaries():
+    result = {}
+    dictionary_names = list(map(str.strip, open("dictionaries/list.txt", encoding='utf8').readlines()))
+    for dictionary_name in dictionary_names:
+        result[dictionary_name] = list(
+            map(str.strip, open("dictionaries/" + dictionary_name + ".txt", encoding='utf8').readlines()))
+    return result
+
 
 
 def start(update, context):
@@ -173,31 +185,16 @@ def echo(update, context):
         context.user_data["removeword"] = False
         update.message.reply_text(reply)
         return
+    reply = None
     if room:
-        # Add word(s)
         words = text.split()
-        if len(words) == 1:
-            status = hat.add_word(text, user_id, room)
-            if status:
-                reply = texts.word_added_message.format(hat.words_in_hat(room))
-            else:
-                reply = texts.word_not_added_message
-        else:
-            added_word_count = 0
-            skipped_words = []
-            for word in words:
-                if hat.add_word(word, user_id, room):
-                    added_word_count += 1
-                else:
-                    skipped_words.append(word)
-            skipped_words_string = ", ".join(skipped_words)
-            if len(skipped_words) > 0 and len(skipped_words_string) < 200:
-                reply = texts.words_added_skipped_words_message.format(added_word_count, skipped_words_string,
-                                                                       hat.words_in_hat(room))
-            else:
-                reply = texts.words_added_skip_count_message.format(added_word_count, len(skipped_words),
-                                                                    hat.words_in_hat(room))
-    else:
+        if len(words) == 2 and words[0] in dictionaries and words[1].isdigit():
+            # Add words from dictionary
+            reply = add_words_from_dictionary(room, user_id, words)
+        elif room:
+            # Add word(s)
+            reply = add_single_or_multiple_words(room, user_id, words)
+    if reply is None:
         # Add user to the room
         print(text)
         text = text.lower()
@@ -210,6 +207,48 @@ def echo(update, context):
         else:
             reply = texts.no_such_rooms_message
     update.message.reply_text(reply, reply_markup=reply_markup)
+
+
+def add_single_or_multiple_words(room, user_id, words):
+    if len(words) == 1:
+        status = hat.add_word(words[0], user_id, room)
+        if status:
+            reply = texts.word_added_message.format(hat.words_in_hat(room))
+        else:
+            reply = texts.word_not_added_message
+    else:
+        added_word_count = 0
+        skipped_words = []
+        for word in words:
+            if hat.add_word(word, user_id, room):
+                added_word_count += 1
+            else:
+                skipped_words.append(word)
+        skipped_words_string = ", ".join(skipped_words)
+        if len(skipped_words) > 0 and len(skipped_words_string) < 200:
+            reply = texts.words_added_skipped_words_message.format(added_word_count, skipped_words_string,
+                                                                   hat.words_in_hat(room))
+        else:
+            reply = texts.words_added_skip_count_message.format(added_word_count, len(skipped_words),
+                                                                hat.words_in_hat(room))
+    return reply
+
+
+def add_words_from_dictionary(room, user_id, words):
+    dictionary_name = words[0]
+    to_add_word_count = int(words[1])
+    if to_add_word_count <= 0 or to_add_word_count > hat.max_word_count():
+        return texts.illegal_to_add_word_count_message.format(hat.max_word_count())
+    if hat.words_in_hat(room) + to_add_word_count > hat.max_word_count():
+        return texts.illegal_total_word_count_message.format(hat.max_word_count())
+    added_word_count = 0
+    while added_word_count < to_add_word_count:
+        add_words = random.sample(dictionaries[dictionary_name], to_add_word_count - added_word_count)
+        for word in add_words:
+            if hat.add_word(word, user_id, room):
+                added_word_count += 1
+    reply = texts.words_added_from_dictionary_message.format(dictionary_name, added_word_count, hat.words_in_hat(room))
+    return reply
 
 
 def removeword(update, context):
@@ -328,6 +367,13 @@ def error(update, context):
 
 
 def main():
+    # Initialize random from time for later use
+    random.seed(datetime.now())
+
+    # Read dictionary files into RAM
+    global dictionaries
+    dictionaries = read_dictionaries()
+
     """Start the bot."""
     if sys.argv[3] == "prod":
         token = prod_config.token
