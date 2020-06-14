@@ -5,16 +5,16 @@ import random
 from datetime import datetime
 import logging
 import sys
-import texts
+import threading
+import time
+
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+
 import prod_config
 import staging_config
-import time
-import threading
-
+import texts
 from db import start_game, HatWrapper
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-
 from round import Round
 
 logging.basicConfig(filename=sys.argv[2], format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -335,7 +335,7 @@ def ready(update, context):
         if "room" + room in context.bot_data:
             context.bot_data["room" + room].add(user_id)
         else:
-            context.bot_data["room" + room] = set([user_id])
+            context.bot_data["room" + room] = {user_id}
         reply = texts.ready
         if check_ready(room, context):
             start_round(room, context)

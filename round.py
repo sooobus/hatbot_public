@@ -1,6 +1,4 @@
-import itertools
 from collections import Counter
-from random import shuffle
 
 
 class Move:
@@ -92,13 +90,13 @@ class Round:
     def __next_move(self):
         """ Starts next move and returns players' names. """
         self.lead, self.target = next(self.move)
-        return (self.lead, self.target)
+        return self.lead, self.target
 
     def __next_word(self, player):
         """ Returns the next word to explain. """
         if player == self.lead:
             self.word = self.word_collection.get_word()
-            if self.word == None:
+            if self.word is None:
                 return "Слова закончились"
             return self.word
         else:
