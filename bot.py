@@ -46,8 +46,8 @@ def help(update, context):
     update.message.reply_text(texts.help_message)
 
 
-buttons = ["угадано!", "ошибка :(", "всё."]
-ready_button = ["хочу слово!"]
+buttons = [texts.guessed_button, texts.fail_button, texts.end_of_turn_button]
+ready_button = [texts.next_word_button]
 
 reply_markup_game = ReplyKeyboardMarkup.from_column(buttons)
 reply_markup_ready = ReplyKeyboardMarkup.from_column(ready_button)
@@ -130,15 +130,15 @@ def continue_turn(update, context):
     user_id = user_data['id']
     room = game.room_for_player(user_id)
     logger.info("continue_turn %d %s", user_id, text)
-    if text == "угадано!":
+    if text == texts.guessed_button:
         reply = context.bot_data["round" + room].guessed(user_id)
         update.message.reply_text(reply, reply_markup=reply_markup_game)
         return
-    elif text == "ошибка :(":
+    elif text == texts.fail_button:
         context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].failed(user_id)
         reply = pretty_turn(turn, context)
-    elif text == "всё.":
+    elif text == texts.end_of_turn_button:
         context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].time_ran_out(user_id)
         reply = pretty_turn(turn, context)
@@ -297,7 +297,7 @@ def start_round(room, context):
     reply = texts.everyone_ready
     hatwr = HatWrapper(room, hat)
     if len(context.bot_data["room" + room]) < 2:
-        reply = "Для начала игры нужно хотя бы два игрока"
+        reply = texts.not_enough_players_message
         turn = (0, 0)
     else:
         context.bot_data["round" + room] = Round(hatwr, list(context.bot_data["room" + room]))
@@ -338,7 +338,7 @@ def ready(update, context):
             start_round(room, context)
             return
     else:
-        reply = ":("
+        reply = texts.ready_from_hall_message
     update.message.reply_text(reply, reply_markup=reply_markup)
 
 

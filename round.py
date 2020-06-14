@@ -1,4 +1,5 @@
 from collections import Counter
+import texts
 
 
 class Move:
@@ -43,7 +44,7 @@ class Round:
         if player == self.lead:
             return self.__next_word(player)
         else:
-            return "Сейчас не ваш ход"
+            return texts.not_your_turn_message
 
     def guessed(self, player):
         """ Increments player's points. """
@@ -54,14 +55,14 @@ class Round:
             self.guessed_points[self.target] += 1
             return self.__next_word(player)
         else:
-            return "Сейчас не ваш ход"
+            return texts.not_your_turn_message
 
     def failed(self, player):
         """ Passes the turn to the next player. """
         if player == self.lead:
             return self.__next_move()
         else:
-            return "Сейчас не ваш ход"
+            return texts.not_your_turn_message
 
     def time_ran_out(self, player):
         """ Puts the word back and passes the turn. """
@@ -70,7 +71,7 @@ class Round:
                 self.word_collection.add_word(self.word, player)
             return self.__next_move()
         else:
-            return "Сейчас не ваш ход"
+            return texts.not_your_turn_message
 
     def pretty_scores(self):
         most_common = self.points.most_common(len(self.players))
@@ -97,7 +98,7 @@ class Round:
         if player == self.lead:
             self.word = self.word_collection.get_word()
             if self.word is None:
-                return "Слова закончились"
+                return texts.no_more_words_message
             return self.word
         else:
-            return "Сейчас не ваш ход"
+            return texts.not_your_turn_message
