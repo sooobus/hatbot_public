@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import random
-from datetime import datetime
+import argparse
 import logging
-import sys
+import random
 import threading
 import time
+from datetime import datetime
 
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -14,20 +14,18 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import prod_config
 import staging_config
 import texts
-from db import start_game, HatWrapper
+from db import start_game, HatWrapper, Game, Hat
 from round import Round
 
-logging.basicConfig(filename=sys.argv[2], format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
 logger = logging.getLogger(__name__)
-
-hat, game = start_game(sys.argv[1])
+hat: Hat
+game: Game
 
 allowed_rooms = list(map(str.strip, open("rooms.txt", encoding='utf8').readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt", encoding='utf8').readlines()))
 personal_rooms = list(map(str.strip, open("personal_rooms.txt", encoding='utf8').readlines()))
 dictionaries = {}
+
 
 def read_dictionaries():
     result = {}
@@ -36,7 +34,6 @@ def read_dictionaries():
         result[dictionary_name] = list(
             map(str.strip, open("dictionaries/" + dictionary_name + ".txt", encoding='utf8').readlines()))
     return result
-
 
 
 def start(update, context):
@@ -367,6 +364,18 @@ def error(update, context):
 
 
 def main():
+    configs = {'prod': prod_config,
+               'staging': staging_config,
+               }
+
+    parser = argparse.ArgumentParser(description='Hat bot')
+    parser.add_argument('db_file', help='SQLite database file')
+    parser.add_argument('log_file', help='Log file name')
+    parser.add_argument('config', help='Environment', choices=list(configs.keys()))
+    args = parser.parse_args()
+
+    config = configs[args.config]
+
     # Initialize random from time for later use
     random.seed(datetime.now())
 
@@ -374,15 +383,14 @@ def main():
     global dictionaries
     dictionaries = read_dictionaries()
 
-    """Start the bot."""
-    if sys.argv[3] == "prod":
-        token = prod_config.token
-    elif sys.argv[3] == "staging":
-        token = staging_config.token
-    else:
-        print("Please specify bot version.")
-        return
-    updater = Updater(token, use_context=True)
+    logging.basicConfig(filename=args.log_file,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
+    global hat, game
+    hat, game = start_game(args.db_file)
+
+    updater = Updater(token=config.token, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
