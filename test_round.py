@@ -83,8 +83,11 @@ class TestRound(unittest.TestCase):
         got.add(r.guessed(1))
         self.assertEqual(r.time_ran_out(1), (2, 0))
 
+        self.assertEqual(r.start_move(1), texts.not_your_turn_message)
+
         got.add(r.start_move(2))
         self.assertEqual(r.time_ran_out(2), (0, 2))
+        self.assertEqual(r.time_ran_out(2), texts.not_your_turn_message)
 
         got.add(r.start_move(0))
         got.add(r.guessed(0))
@@ -96,6 +99,7 @@ class TestRound(unittest.TestCase):
 
         got.add(r.start_move(2))
         self.assertEqual(r.failed(2), (0, 1))
+        self.assertEqual(r.failed(2), texts.not_your_turn_message)
         self.assertEqual(r.guessed(2), texts.not_your_turn_message)
 
         self.assertEqual(r.start_move(0), texts.no_more_words_message)
