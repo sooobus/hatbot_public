@@ -85,9 +85,18 @@ class Hat:
         self.db_file = db_file
         execute_sql(self.db_file, create_table_words_q)
 
+    @staticmethod
+    def max_word_count():
+        return 1000
+
+    @staticmethod
+    def max_word_length():
+        return 200
+
     def add_word(self, word, player_id, room):
         word = word.lower()
-        if not check_word(word):
+        if not check_word(word)\
+                or len(word) > self.max_word_length() or self.words_in_hat(room) >= self.max_word_count():
             return False
         else:
             query = find_unused_word_q.format(word, room)

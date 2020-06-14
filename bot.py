@@ -28,12 +28,13 @@ personal_rooms = list(map(str.strip, open("personal_rooms.txt").readlines()))
 dictionaries = {}
 
 
-def preload_dictionaries():
-    """Read dictionary files into RAM."""
+def read_dictionaries():
+    result = {}
     dictionary_names = list(map(str.strip, open("dictionaries/list.txt", encoding='utf8').readlines()))
     for dictionary_name in dictionary_names:
-        dictionaries[dictionary_name] = list(
+        result[dictionary_name] = list(
             map(str.strip, open("dictionaries/" + dictionary_name + ".txt", encoding='utf8').readlines()))
+    return result
 
 
 def start(update, context):
@@ -140,15 +141,16 @@ def echo(update, context):
         context.user_data["removeword"] = False
         update.message.reply_text(reply)
         return
-
-    words = text.split()
-    if len(words) == 2 and words[0] in dictionaries and words[1].isdigit():
-        # Add words from dictionary
-        reply = add_words_from_dictionary(room, user_id, words)
-    elif room:
-        # Add word(s)
-        reply = add_single_or_multiple_words(room, user_id, words)
-    else:
+    reply = None
+    if room:
+        words = text.split()
+        if len(words) == 2 and words[0] in dictionaries and words[1].isdigit():
+            # Add words from dictionary
+            reply = add_words_from_dictionary(room, user_id, words)
+        elif room:
+            # Add word(s)
+            reply = add_single_or_multiple_words(room, user_id, words)
+    if reply is None:
         # Add user to the room
         print(text)
         text = text.lower()
@@ -191,6 +193,10 @@ def add_single_or_multiple_words(room, user_id, words):
 def add_words_from_dictionary(room, user_id, words):
     dictionary_name = words[0]
     to_add_word_count = int(words[1])
+    if to_add_word_count <= 0 or to_add_word_count > hat.max_word_count():
+        return texts.illegal_to_add_word_count_message.format(hat.max_word_count())
+    if hat.words_in_hat(room) + to_add_word_count > hat.max_word_count():
+        return texts.illegal_total_word_count_message.format(hat.max_word_count())
     added_word_count = 0
     while added_word_count < to_add_word_count:
         add_words = random.sample(dictionaries[dictionary_name], to_add_word_count - added_word_count)
@@ -308,7 +314,8 @@ def main():
     random.seed(datetime.now())
 
     # Read dictionary files into RAM
-    preload_dictionaries()
+    global dictionaries
+    dictionaries = read_dictionaries()
 
     """Start the bot."""
     if sys.argv[3] == "prod":
