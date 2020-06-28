@@ -1,33 +1,31 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import random
-from datetime import datetime
+import argparse
 import logging
-import sys
-import texts
+import random
+import threading
+import time
+from datetime import datetime
+
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+
 import prod_config
 import staging_config
-import time
-import threading
-
-from db import start_game, HatWrapper
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-
+import texts
+from db import start_game, HatWrapper, Game, Hat
 from round import Round
 
-logging.basicConfig(filename=sys.argv[2], format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
 logger = logging.getLogger(__name__)
-
-hat, game = start_game(sys.argv[1])
+hat: Hat
+game: Game
 
 allowed_rooms = list(map(str.strip, open("rooms.txt", encoding='utf8').readlines()))
 experimental_rooms = list(map(str.strip, open("experimental_rooms.txt", encoding='utf8').readlines()))
 personal_rooms = list(map(str.strip, open("personal_rooms.txt", encoding='utf8').readlines()))
 dictionaries = {}
+
 
 def read_dictionaries():
     result = {}
@@ -36,7 +34,6 @@ def read_dictionaries():
         result[dictionary_name] = list(
             map(str.strip, open("dictionaries/" + dictionary_name + ".txt", encoding='utf8').readlines()))
     return result
-
 
 
 def start(update, context):
@@ -49,8 +46,8 @@ def help(update, context):
     update.message.reply_text(texts.help_message)
 
 
-buttons = ["угадано!", "ошибка :(", "всё."]
-ready_button = ["хочу слово!"]
+buttons = [texts.guessed_button, texts.fail_button, texts.end_of_turn_button]
+ready_button = [texts.next_word_button]
 
 reply_markup_game = ReplyKeyboardMarkup.from_column(buttons)
 reply_markup_ready = ReplyKeyboardMarkup.from_column(ready_button)
@@ -136,15 +133,15 @@ def continue_turn(update, context):
     user_id = user_data['id']
     room = game.room_for_player(user_id)
     logger.info("continue_turn %d %s", user_id, text)
-    if text == "угадано!":
+    if text == texts.guessed_button:
         reply = context.bot_data["round" + room].guessed(user_id)
         update.message.reply_text(reply, reply_markup=reply_markup_game)
         return
-    elif text == "ошибка :(":
+    elif text == texts.fail_button:
         context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].failed(user_id)
         reply = pretty_turn(turn, context)
-    elif text == "всё.":
+    elif text == texts.end_of_turn_button:
         context.bot_data["abort_timer_message" + room] = text
         turn = context.bot_data["round" + room].time_ran_out(user_id)
         reply = pretty_turn(turn, context)
@@ -303,7 +300,7 @@ def start_round(room, context):
     reply = texts.everyone_ready
     hatwr = HatWrapper(room, hat)
     if len(context.bot_data["room" + room]) < 2:
-        reply = "Для начала игры нужно хотя бы два игрока"
+        reply = texts.not_enough_players_message
         turn = (0, 0)
     else:
         context.bot_data["round" + room] = Round(hatwr, list(context.bot_data["room" + room]))
@@ -338,13 +335,13 @@ def ready(update, context):
         if "room" + room in context.bot_data:
             context.bot_data["room" + room].add(user_id)
         else:
-            context.bot_data["room" + room] = set([user_id])
+            context.bot_data["room" + room] = {user_id}
         reply = texts.ready
         if check_ready(room, context):
             start_round(room, context)
             return
     else:
-        reply = ":("
+        reply = texts.ready_from_hall_message
     update.message.reply_text(reply, reply_markup=reply_markup)
 
 
@@ -370,6 +367,18 @@ def error(update, context):
 
 
 def main():
+    configs = {'prod': prod_config,
+               'staging': staging_config,
+               }
+
+    parser = argparse.ArgumentParser(description='Hat bot')
+    parser.add_argument('db_file', help='SQLite database file')
+    parser.add_argument('log_file', help='Log file name')
+    parser.add_argument('config', help='Environment', choices=list(configs.keys()))
+    args = parser.parse_args()
+
+    config = configs[args.config]
+
     # Initialize random from time for later use
     random.seed(datetime.now())
 
@@ -377,15 +386,14 @@ def main():
     global dictionaries
     dictionaries = read_dictionaries()
 
-    """Start the bot."""
-    if sys.argv[3] == "prod":
-        token = prod_config.token
-    elif sys.argv[3] == "staging":
-        token = staging_config.token
-    else:
-        print("Please specify bot version.")
-        return
-    updater = Updater(token, use_context=True)
+    logging.basicConfig(filename=args.log_file,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
+    global hat, game
+    hat, game = start_game(args.db_file)
+
+    updater = Updater(token=config.token, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
