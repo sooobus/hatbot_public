@@ -93,9 +93,7 @@ def start_turn(update, context):
 
 
 def send_results_to_all(context, room):
-    scores = context.bot_data["round" + room].pretty_scores()
-    scores_names = ["{}: {}".format(context.bot_data["username" + str(k)], v) for k, v in scores]
-    reply = "\n".join(scores_names)
+    reply = get_results_reply(context, room)
     for user in context.bot_data["room" + room]:
         context.bot.send_message(context.bot_data["chatid" + str(user)],
                                  reply,
@@ -107,13 +105,18 @@ def results(update, context):
     user_id = user['id']
     room = game.room_for_player(user_id)
     logger.info("results %d", user_id)
+    reply = get_results_reply(context, room)
+    update.message.reply_text(reply)
+
+
+def get_results_reply(context, room):
     scores = context.bot_data["round" + room].pretty_scores()
     scores_names = []
     for player, total_score, explained_score, guessed_score in scores:
         player_username = context.bot_data["username" + str(player)]
         scores_names.append("{}: {}+{}={}".format(player_username, explained_score, guessed_score, total_score))
     reply = "\n".join(scores_names)
-    update.message.reply_text(reply)
+    return reply
 
 
 def finish_round(update, context):
