@@ -69,6 +69,8 @@ def handle_timer(context, room, timer, message):
         message.edit_text(texts.timer_stopped_message)
         for user in context.bot_data["room" + room]:
             context.bot.send_message(context.bot_data["chatid" + str(user)], texts.timer_finished_message)
+        for user in context.bot_data["subs"]:
+            context.bot.send_message(context.bot_data["chatid" + str(user)], texts.timer_finished_message)
 
 
 def start_turn(update, context):
@@ -85,6 +87,8 @@ def start_turn(update, context):
     logger.info("start_turn %d %s", user_id, text)
     for user in context.bot_data["room" + room]:
         context.bot.send_message(context.bot_data["chatid" + str(user)], texts.turn_started_message)
+    for user in context.bot_data["subs"]:
+        context.bot.send_message(context.bot_data["chatid" + str(user)], texts.turn_started_message)
     reply = context.bot_data["round" + room].start_move(user_id)
     update.message.reply_text(reply, reply_markup=reply_markup_game)
 
@@ -95,6 +99,10 @@ def send_results_to_all(context, room):
         context.bot.send_message(context.bot_data["chatid" + str(user)],
                                  reply,
                                  reply_markup=ReplyKeyboardRemove())
+    for user in context.bot_data["subs"]:
+        context.bot.send_message(context.bot_data["chatid" + str(user)],
+                                 reply)
+
 
 
 def results(update, context):
@@ -151,6 +159,8 @@ def continue_turn(update, context):
             context.bot.send_message(context.bot_data["chatid" + str(user)], reply, reply_markup=reply_markup_ready)
         else:
             context.bot.send_message(context.bot_data["chatid" + str(user)], reply, reply_markup=ReplyKeyboardRemove())
+    for user in context.bot_data["subs"]:
+        context.bot.send_message(context.bot_data["chatid" + str(user)], reply, reply_markup=ReplyKeyboardRemove())
 
 
 def echo(update, context):
@@ -314,6 +324,8 @@ def start_round(room, context):
             reply_markup = reply_markup_ready
         context.bot.send_message(context.bot_data["chatid" + str(user)], reply,
                                  reply_markup=reply_markup)
+    for user in context.bot_data["subs"]:
+        context.bot.send_message(context.bot_data["chatid" + str(user)], reply)
 
 
 def force_start(update, context):
@@ -321,6 +333,16 @@ def force_start(update, context):
     user_id = user['id']
     room = game.room_for_player(user_id)
     start_round(room, context)
+
+
+def subscribe(update, context):
+    user = update.message.from_user
+    user_id = user['id']
+    logger.info("SUB %d", user_id)
+    context.bot_data["chatid" + str(user_id)] = update.message.chat.id
+    if "subs" not in context.bot_data:
+        context.bot_data["subs"] = []
+    context.bot_data["subs"].append(user_id)
 
 
 def ready(update, context):
@@ -408,6 +430,7 @@ def main():
     dp.add_handler(CommandHandler("results", results))
     dp.add_handler(CommandHandler("force_start", force_start))
     dp.add_handler(CommandHandler("finish_round", finish_round))
+    dp.add_handler(CommandHandler("subscribe", subscribe))
     dp.add_handler(MessageHandler(Filters.text(ready_button), start_turn))
     dp.add_handler(MessageHandler(Filters.text(buttons), continue_turn))
     dp.add_handler(MessageHandler(Filters.text, echo))
